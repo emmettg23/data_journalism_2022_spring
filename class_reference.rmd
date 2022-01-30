@@ -27,3 +27,9 @@ ppp_maryland_loans %>%
     count_loans = n()
   )
 ```
+
+
+To get a quick look at the top 6 rows of a data set:glimpse(wv_ppp_loans)
+
+To store data table in righthand viewer: wv_summary<-wv_ppp_loans %>% 
+
