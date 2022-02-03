@@ -136,6 +136,8 @@ Filter is a tidyverse verb that uses criteria you supply to return a subset of t
 
 `filter(COLUMN_NAME OPERATOR CRITERIA)`
 
+
+
 Where COLUMN_NAME is any column name from your dataframe, OPERATOR is some comparison operator like == or > or < and CRITERIA is something to compare the values in COLUMN_NAME to.
 
 ### Task 10: Filter by county
@@ -168,7 +170,7 @@ nrow(or_prince_georges)
 ```
 What is the number of applications that meet that criteria? Put your answer in the space below.
 **Answer**
-52724 applications.
+52724 applications. | = OR calculation. If meets any of these criteria, included in the final tally.
 
 ## Dates
 The key to working with dates is that R needs to know that the column containing the date has a datatype of date (or datetime for timestamps). Regular R will guess, and the tidyverse will make a better guess.

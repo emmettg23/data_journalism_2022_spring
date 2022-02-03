@@ -58,3 +58,32 @@ maryland_ppp %>%
   summarise(total = n()) %>%
   arrange(desc(total))
 
+= -> assignment; == -> assessment. I.e. filter (amount==1000) sets criteria for searching amounts that much 1000. To determine less/greater than; filter (amount<=1000) filter(amount>=1000)
+
+If we want to make all of our cities uppercase:
+
+maryland_ppp <- maryland_ppp %>% mutate(project_city = str_to_upper(project_city))
+
+> md_counties<-maryland_ppp %>% group_by(project_county_name) %>% summarize(count=n())
+
+Best way to deal with dates? Treat them as dates!! 
+
+ # ---> maryland_ppp_sample <- read.csv('data/ppp_maryland.csv)
+  Not great, interprets them as characters, not date.
+  
+Specifically command R to understand that column is date.
+
+ ---> lubridate_maryland_ppp <-- maryland_ppp_sample %>% mutate(Clean Date = ymd_hms(date_approved)) 
+      glimpse(lubridate_maryland_ppp); sets in Hour Minute Second, doesn't work.
+      
+      maryland_ppp_sample <- read_csv('data/ppp_maryland.csv')
+      glimpse(maryland_ppp_sample) will get you what you need!
+      
+Why it's useful to treat dates as dates:
+
+floor_date = helps count variables by month; rounds down value to first day of each month — group_by then racks up the datapoints created by the floor_date command.
+
+
+
+
+
