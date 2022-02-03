@@ -33,3 +33,28 @@ To get a quick look at the top 6 rows of a data set:glimpse(wv_ppp_loans)
 
 To store data table in righthand viewer: wv_summary<-wv_ppp_loans %>% 
 
+When testing new code chunks, red lettering may arise as a warning — not an error. If that is the case, when you run it again, the red lettering will not appear.
+
+mutate(new_column = value/calculation that goes into that column) In this case, we are creating a new column that takes % of loan that goes towards payroll. Can also use to update existing columns.
+
+To turn a percentage to the 100s; percent_payroll = (payroll_proceed/amount)*100.
+
+
+If else; categorizes as one thing or the other and creates new column to indicate. Code:
+
+ in_out = if_else(
+        servicing_lender_state == 'MD', "IN", "OUT"
+        
+Double equal signs (==) tests for equivalency.
+
+The following code summarizes the total number of banks in and out of Maryland.
+maryland_with_in_out %>% group_by(in_out)%>%summarize(count=n())
+
+The following code tallies up how many data points fall in each month of the year and organizes them from most points to least:
+
+maryland_ppp %>%
+  mutate(Month = floor_date(date_approved, "month")) %>%
+  group_by(Month) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total))
+
