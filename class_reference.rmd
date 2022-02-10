@@ -83,7 +83,47 @@ Why it's useful to treat dates as dates:
 
 floor_date = helps count variables by month; rounds down value to first day of each month — group_by then racks up the datapoints created by the floor_date command.
 
+To only work with data from a specific year; filter(date_approved>2020-12-31) 
+
+select(name, amount, date_approved) to be only shown set variables.
 
 
+guess_max=10 guesses the column type best on the first 10 rows of data in the file. I.e. if something looks like a number, date, or character column, they're labeled accordingly.
+
+The lower the number, the higher the risk of inaccuracy. 
+
+NA = no value here.
+
+####THIS CODE ASSURES THAT R CLASSIFIES A VARIABLE IN THE FIELD YOU LIST#####
+ppp_maryland_loans <- ppp_maryland_loans %>%
+  mutate(id = as.character(id))
+
+glimpse(ppp_maryland_loans)
+
+Overwrites old code.
+
+This code is dope; can't explain why. Groups reoccurring franchise names and aggregates data. Check it:
+
+ppp_maryland_loans %>%
+  group_by(franchise_name) %>%
+  summarise(
+    count=n()
+  ) %>%
+  arrange(desc(count))
+```
 
 
+  filter(is.na(forgiveness_date))
+
+Check to see that if the following column is NA.
+
+ppp_maryland_loans %>%
+  mutate(month_year_approved = floor_date(date_approved, "month")) %>%
+  group_by(month_year_approved) %>%
+   summarise(
+    count=n()
+  ) %>%
+  arrange(month_year_approved)
+  
+  
+  Similar to last floor_date code; sets all month values to the 1st and counts totals.
