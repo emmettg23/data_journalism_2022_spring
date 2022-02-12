@@ -127,3 +127,9 @@ ppp_maryland_loans %>%
   
   
   Similar to last floor_date code; sets all month values to the 1st and counts totals.
+  
+  In case_when; True ~ city; keeps rest of values that you are not trying to alter as they were; the same.
+  
+  str_detect(city,"^Arnl") ~ "Arnold", tries to find repetition under the character column.
+  
+  ^ at beginning commands function to search in first characters of the field.
