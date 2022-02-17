@@ -133,3 +133,50 @@ ppp_maryland_loans %>%
   str_detect(city,"^Arnl") ~ "Arnold", tries to find repetition under the character column.
   
   ^ at beginning commands function to search in first characters of the field.
+  
+  
+  my_result <- orignial_data%>%
+  filter(some_column == "some value)%>%
+  mutate(some_column=str_to_title(some_column)%>%
+  group_by()
+  summarise()
+  arange(desc)
+  
+  #Identify top businesses in zip and limits zip to 5 digit code; elimating 9 digit codes.
+  mutate(zip_five = str_sub(zip, start=1L, end=5L))%>%
+  filter(zip_five == "25301")%>%
+  arrange(des(amount))
+  head(1)
+  
+  miller_totals <- miller_ppp_loans%>%
+    mutate(amount = as.numeric(acount))%>%
+    summarise(
+    total_amount = sum(amount),
+    total_forgiveness_amount = sum(forgiveness_amount)
+    )%>%
+    
+    
+  #Making new data with multiple dataframes
+  
+  1.Combines the three files into a single data frame using the bind_rows function
+  
+        ```{r}
+      # bind_rows with list
+      estimates <- bind_rows(list(popestimate_2010, popestimate_2015, popestimate_2020))
+      View(estimates)
+      ```
+
+  2. Join files by shared variable, in this case, by "naics_code." left_join because we begin with maryland_ppp dataframe and join    with the second dataframe; naics_codes. "by=" tells R what we are joining by — this column is shared, so it is the one to join on.
+  Slim down results through select(name, naics_code, title)%>% then count rows.
+
+      # with nrow included to match row total
+      maryland_ppp %>% left_join(naics_codes, by="naics_code") %>% select(name, naics_code, title) %>% nrow()
+
+
+
+  3. Create a new dataframe with combined tables:
+  
+      maryland_ppp_with_naics <- maryland_ppp %>% left_join(naics_codes)
+
+      
+  
