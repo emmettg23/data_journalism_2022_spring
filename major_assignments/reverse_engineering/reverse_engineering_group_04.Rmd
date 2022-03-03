@@ -70,7 +70,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 5. Grouped cases by year, summarized total payout amounts for each year.
 
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: 
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -81,7 +81,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 2
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "Thousands of legal battles involving the Los Angeles Police Department, including a rash of recent settlements over police shootings and wrongful imprisonment, have added up to more than 40% of the total — a higher sum than any other city department, the analysis showed. That includes more than $24 million paid to two men who were freed after decades in prison, along with lawsuits over arrests, injuries, car crashes and alleged retaliation and discrimination against its own employees.”
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -93,7 +93,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 3
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: Lawsuits tied to the city departments that oversee its streets and sidewalks, including the Bureau of Street Services and the Department of Transportation, accounted for a growing share. Legal payouts for “dangerous conditions” have rivaled and, last budget year, even exceeded the cost of lawsuits over police misconduct, the analysis found. In May, the city attorney’s office warned that there had been “unprecedented growth” in such payouts.”
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -105,7 +105,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 4
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: “Many cases have arisen from people being wounded or killed while crossing city streets: In recent years, the city agreed to pay \15 million dollars to end a legal battle over a man who was gravely injured while crossing Franklin Avenue in Hollywood, another \15 million dollars to the family of two girls hit in a North Hollywood crosswalk and $9.5 million to the family of a teenage girl fatally struck by a taxi near Dockweiler State Beach."
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -117,7 +117,7 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 5
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: “Beyond the mammoth cases, a pileup of other large payouts has padded the tab, a Times analysis of city payouts found. While the total number of payouts has dipped over time, the average amount has increased. Last budget year, the city paid out 30 settlements of $1 million or more — five times as many as a decade before.”
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
