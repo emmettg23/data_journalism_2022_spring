@@ -60,9 +60,14 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 1
 
-* **Sentence text**: “Beyond the mammoth cases, a pileup of other large payouts has padded the tab, a Times analysis of city payouts found. While the total number of payouts has dipped over time, the average amount has increased. Last budget year, the city paid out 30 settlements of $1 million or more — five times as many as a decade before.”
+* **Sentence text**: “Last budget year, the total for all types of payouts reached $201 million — the highest on record — but city officials are unsure whether that is the largest amount because records go back only two decades.”
 
 * **General steps to reverse engineer**: 
+1. Downloaded an excel sheet of all LA City Payouts between 2006-2018 from LA Times Github, deleted extraneous titles that could get in the way when converted to .csv.
+2. Converted the file to a .csv.
+3. Removed the /$ from the amount field.
+4. Converted the amount field to a numeric datatype.
+5. Grouped cases by year, summarized total payout amounts for each year.
 
 
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
