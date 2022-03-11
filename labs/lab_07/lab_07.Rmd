@@ -1,0 +1,177 @@
+---
+title: "lab_07"
+author: "emmett gartner"
+date: "03/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About this lab
+
+To complete this lab, you need to:
+* write code in empty codeblocks provided to answer questions included (look for **Q**).
+* write out the answer in the form of a complete sentence in the space given (look for **A**).
+
+When you are finished, commit changes and push to your personal GitHub repo, then submit the URL to this document on ELMS.
+
+## Load libraries and establish settings
+**Task**: Load rvest, janitor and the tidyverse
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+# Load the tidyverse,rvest,janitor
+install.packages('rvest')
+install.packages(lubridate)
+library(rvest)
+library(tidyverse)
+library(janitor)
+library(lubridate)
+```
+Some Advice: rvest gives you access to four functions you will use. They are:
+
+*read_html() - given a url, it reads HTML
+*html_table() - given some HTML, it finds all the <table> objects in it
+*html_elements() - given some HTML, you supply one or more tags OR an xpath expression. An example:
+  my_stuff <- url %>%
+  read_html() %>%
+  html_elements ('p a ')#this finds all the <p> tags
+*html_text() - the contents of any tag
+
+1. read the html
+2. find the elements needed
+3 grab the dataframe and put it in a container for all of my data
+ 
+
+  
+Q1. How many individual cases has the U.S. Department of Justice filed against people accused of fraud related to the PPP or EIDL loan program, according to the DOJ website listing those cases: https://www.justice.gov/criminal-fraud/cares-act-fraud?  An example of one case that appears on this page is "U.S. v. Richard Ayvazyan et al". To answer this question, you will need to use rvest to scrape the data on this single webpage into a dataframe that lists only case names. Hint: you will need to make use of html_elements() and html_text() -- a function that extracts text inside of an html tag -- for this.
+A1. 100 individual cases.
+
+```{r}
+# Define url of page we want to scrape
+doj_fraud_url <- "https://www.justice.gov/criminal-fraud/cares-act-fraud?"
+
+# Read in all html from table, store all tables on page as nested list of dataframes.
+
+doj_ppp_cases <- doj_fraud_url%>%
+  read_html() %>%
+  html_elements('li b ')%>%
+  html_text()
+
+doj_ppp_cases <- as.data.frame(doj_ppp_cases)%>%
+  clean_names() %>%
+  slice(-14)
+
+
+```
+
+Q2. In how many individual judicial districts has the U.S. Department of Justice filed cases against people accused of fraud related to the PPP or EIDL loan program, according to the DOJ website listing those cases: https://www.justice.gov/criminal-fraud/cares-act-fraud?  Note: an example of a judicial district is "Southern District of Florida". You will need to use rvest scrape the data on this single webpage into a dataframe.
+A2. 31 judicial districts.
+
+```{r}
+
+doj_ppp_jurisdictions <- doj_fraud_url%>%
+  read_html() %>%
+  html_elements('p i ')%>%
+  html_text()
+
+doj_ppp_jurisdictions <- as.data.frame(doj_ppp_jurisdictions)
+```
+
+Q4. The website (https://www.justice.gov/criminal-fraud/cares-act-fraud) shows that the DOJ filed more cases in the Southern District of Florida than in any other district. One of those cases was filed against someone named "Diamond Blue Smith". Who is Smith, and what was he accused of, according to the criminal complaint? If you were an editor, would you have assigned a reporter to write a story about this case when the complaint was filed in court? Why or why not?
+A4. Diamond Blue Smith is accused of applying for $24 million worth of PPP loans alongside the owner of a Pennsylvania towing company and then using the funds to purchase a Ferrari and other luxury goods. Yes I would have. The "Florida Man" headline is a timeless classic and, because this story relates to the fraudulent acquisition of government funds, it makes the subject all the more relevant to the health of our democracy.  
+
+Q5. In what percentage of all judicial districts has the U.S. Department of Justice filed cases cases against people accused of fraud related to the PPP or EIDL loan program, according to the DOJ website listing those cases: https://www.justice.gov/criminal-fraud/cares-act-fraud? In answering this question, you should also produce a list of judicial districts where DOJ has NOT filed a case, according to this site.  Note: to answer this question, you will need to scrape a table of all district courts on this up-to-date Wikipedia page under the heading "Active Courts": https://en.wikipedia.org/wiki/List_of_United_States_district_and_territorial_courts  
+A5.46 percent.
+
+
+```{r}
+
+#count total judicial districts that filed PPP or EIDL loan program cases
+doj_ppp_jurisdictions%>%
+    summarize(
+    count = n())
+
+#scrape master list of judicial districts and convert to data frame, count total
+
+# Define url of page we want to scrape
+district_courts_url <- "https://en.wikipedia.org/wiki/List_of_United_States_district_and_territorial_courts"
+
+# Read in all html from table, store all tables on page as nested list of dataframes.
+
+us_district_courts <- district_courts_url%>%
+  httr::GET(config = httr::config(ssl_verifypeer = FALSE)) %>% 
+  read_html() %>%
+  html_table()
+  
+us_district_courts <- us_district_courts[[3]]%>%
+  select(Region)
+
+
+#anti_join ppp data frame with district court master list
+district_courts_no_ppp_cases <- us_district_courts %>% 
+anti_join(doj_ppp_jurisdictions, us_district_courts, by=c("Region"="doj_ppp_jurisdictions"))
+  
+View(district_courts_no_ppp_cases)
+
+#count and divide
+doj_ppp_jurisdictions%>%
+    summarize(
+    count = n())/district_courts_no_ppp_cases%>%
+    summarize(
+    count = n())
+
+
+```
+Q6. What might explain why, according to this site, the DOJ has filed PPP-related fraud cases in less than half of the country's judicial districts?
+A6. One reason could be derived from an error that led to a case being listed twice in the Southern District of Florida: the website is poorly managed. Alternatively, depending on each district's structure and priorities, PPP cases might not be high priority items for some districts. Judicial district attorneys are employees with limited time and resources — they cannot pursue all of the cases they might be interested in. 
+
+Q7. Which state had the most approved PPP loans per 100,000 population? [This web page](https://dwillis.github.io/jour472files/ppp_scraping_example/index.html) has links to 52 individual web pages, one for each state (plus Washington, D.C. and Puerto Rico). Each of those web pages contains a one-row html table that has the name of the state, the number of approved loans, and the 2019 population. Here's an example for [Alabama](https://dwillis.github.io/jour472files/ppp_scraping_example/states/alabama.html). You'll need to loop over the individual state urls, scrape each individual page and combine the information on each page into a single dataframe to answer this question. Don't forget to calculation the loans per 100,000.
+A7.South Dakota had the most approved PPP loans per 100,000 population, with a rate of 7379.531	per capita.
+```{r}
+#anchor url
+
+ppp_loans_url <- "https://dwillis.github.io/jour472files/ppp_scraping_example/index.html"
+
+all_states <- ppp_loans_url%>%
+  read_html()%>%
+  html_table()
+
+all_states <- all_states[[1]]
+
+#create tibble
+
+ppp_loans_states <- tibble()
+
+#loop
+for(row_number in 1:nrow(all_states)){
+  
+  each_row_df <- all_states %>%
+    slice(row_number)
+
+  url <- each_row_df$url
+
+    ppp_info <- url%>%
+      read_html()%>% 
+      html_table()
+  
+  ppp_info <- ppp_info [[1]]
+
+  ppp_loans_states <- ppp_loans_states %>%
+      bind_rows(ppp_info)
+}
+
+  ppp_loans_states
+  
+  #calculate per capita
+  
+  ppp_capita <- ppp_loans_states%>%
+    mutate(per_capita = ((total_ppp_loans/population)*100000))%>%
+        arrange(desc(per_capita))%>%
+        print(ppp_capita)
+      
+  
+```
