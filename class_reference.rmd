@@ -179,4 +179,53 @@ ppp_maryland_loans %>%
       maryland_ppp_with_naics <- maryland_ppp %>% left_join(naics_codes)
 
       
-  
+  ### Sentence 4
+
+* **Sentence text**: Many cases have arisen from people being wounded or killed while crossing city streets: In recent years, the city agreed to pay 15 million dollars to end a legal battle over a man who was gravely injured while crossing Franklin Avenue in Hollywood, another 15 million dollars to the family of two girls hit in a North Hollywood crosswalk and $9.5 million to the family of a teenage girl fatally struck by a taxi near Dockweiler State Beach.
+
+
+* **General steps to reverse engineer**:
+1. To certify what the story claims, we need to identify the traffic cases that resulted in these settlements and the amount paid.
+2. We did so by filtering cases by the Department of Transportation OR a CASE.TYPE of "Traffic." 
+3. Next we organized the filtered data by payout amount, descending. 
+
+
+* **Analysis summary**: We were able to find the two 15 million dollar cases but not the 9.5 million dollar one.
+
+```{r}
+# Put code to reverse engineer sentence here
+la_payouts_traffic <- la_payouts%>%
+  filter(DEPARTMENT == 'Department of Transportation' | (str_detect(CASE.TYPE, 'Traffic')) | DEPARTMENT == 'DEPARTMENT OF TRANSPORTATION')%>%
+  arrange(desc(AMOUNT))
+
+# Display results of code below this codeblock
+
+```
+
+### Sentence 5
+
+* **Sentence text**: “Beyond the mammoth cases, a pileup of other large payouts has padded the tab, a Times analysis of city payouts found. While the total number of payouts has dipped over time, the average amount has increased. Last budget year, the city paid out 30 settlements of $1 million or more — five times as many as a decade before.”
+
+* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+```{r}
+# Put code to reverse engineer sentence here
+la_payouts%>%
+  filter(Year == 2017 & AMOUNT > 1000000)%>%
+    summarize(
+    count = n(),
+    total = sum())
+
+la_payouts%>%
+  filter(Year == 2008 & AMOUNT > 1000000)%>%
+    summarize(
+    count = n(),
+    total = sum())
+
+
+# Display results of code below this codeblock
+
+```
+
+
+str_c(column, column) *** combines values of columns to create new column.
