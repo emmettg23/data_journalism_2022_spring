@@ -130,9 +130,11 @@ non_maryland_zips_yyyymmdd <-all_zips%>%
 ```
 
 ```{r}
-write.csv(maryland_zips_yyyymmdd, "maryland_zips_yyyymmdd.csv")
 
-write.csv(non_maryland_zips_yyyymmdd, "non_maryland_zips_yyyymmdd.csv")
+write_csv(maryland_zips_yyyymmdd, paste("maryland_zips_", str_replace_all(today(), "-", ""), ".csv", sep=""))
+
+
+write_csv(non_maryland_zips_yyyymmdd, paste("non_maryland_zips_", str_replace_all(today(), "-", ""), ".csv", sep=""))
 
 ```
 
