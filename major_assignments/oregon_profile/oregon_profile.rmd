@@ -1,0 +1,422 @@
+---
+name: "emmett gartner"
+title: "state_profile"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PPP State Profile
+
+Your assignment is to explore a dataset of PPP loan applications for a particular state and to answer a series of questions that will help you summarize that state's loan applications. You will need to write R code to answer those questions. You also will bring in other data, including Census information, and you will be making graphics, including maps, to illustrate your findings.
+
+The deliverable will be this R Markdown notebook and a data folder that you will receive with a state's loan application data. Place any other data you are using to answer the questions in the same data folder.
+
+## Load libraries and establish settings
+
+**Task** Create a codeblock and load appropriate packages and settings for this assignment.
+
+```{r}
+options(scipen=999)
+library(tidyverse)
+library(sf)
+library(janitor)
+library(tidycensus)
+census_api_key("cd3fd4748e5debb7e9ca66e72e7af850740cb3d4")
+library(tigris)
+
+
+```
+
+## Initial Exploration
+
+**Q1.**. Write R code that generates some basic descriptive statistics that allows you to describe the applications from your state. This code should produce results that describe the data in different ways: how many applications there are, along with ways to understand the typical and most frequent values for columns you find interesting or newsworthy. You should produce at least five (5) descriptive statistics and write up a summary of the data using them.
+
+```{r}
+#data cleaning
+oregon_ppp <- read_csv("oregon_ppp.csv")%>%
+  clean_names()
+
+oregon_ppp <- oregon_ppp%>%
+    mutate(project_county_name = str_to_title(project_county_name))%>%
+    mutate(zip = str_sub(zip, 1, 5))
+```
+
+
+
+```{r}
+oregon_ppp <- read_csv("oregon_ppp.csv")
+
+#potential summary statistics:
+
+#total number of loans: 115873
+oregon_ppp%>%
+  summarise(
+    count=n()
+  )
+
+#mean loan amount: 86880.24	
+oregon_ppp%>%
+  summarise(
+    mean_loan_amount= mean(amount)
+  )
+
+#mean jobs_retained: 9.762134
+oregon_ppp%>%
+filter(!is.na(jobs_retained))%>%
+summarise(
+    mean_jobs_retained = mean(jobs_retained)
+  )
+  
+#project county with most apps: Multnomah: 30855, Washington: 15003
+oregon_ppp%>%
+  group_by(project_county_name)%>%
+  summarise(
+    count=n()
+  )%>%
+  arrange(desc(count))
+
+#industry with most apps: Full-Service Restaurants: 5431, Beauty Salons: 3345
+oregon_ppp_naics_count <- oregon_ppp_naics%>%
+    group_by(title)%>%
+    summarise(
+    count = n())%>%
+    arrange(desc(count))
+oregon_ppp_naics_count
+
+#industry with largest loan amounts: Full Service Restaurants: 659368933.63, Offices of Physicians: 290532278.37
+oregon_ppp_naics_sums <- oregon_ppp_naics%>%
+    group_by(title)%>%
+    summarise(
+    loan_totals = sum(amount))%>%
+    arrange(desc(loan_totals))
+
+oregon_ppp_naics_sums
+
+#lender with most loans: U.S. Bank, National Association: 13369, Umpqua Bank: 10077
+oregon_ppp%>%
+  group_by(lender)%>%
+  summarise(
+    count=n()
+  )%>%
+  arrange(desc(count))
+
+#lenders with most loans, by project_county
+oregon_ppp%>%
+  group_by(lender, project_county_name)%>%
+  summarise(
+    count=n()
+  )%>%
+  arrange(desc(count))
+
+#in-state lenders vs out of state lenders. in-state: 35608, out-of-state: 80265
+state_lenders<-oregon_ppp%>%
+group_by(servicing_lender_state)%>%
+  summarise(
+    loans=n()
+  )%>%
+  arrange(desc(loans))
+
+or_lenders<-state_lenders%>%
+  filter(servicing_lender_state=='OR')
+
+or_lenders
+
+out_of_state_lenders<-state_lenders%>%
+  filter(servicing_lender_state!='OR')%>%
+  summarise(
+    out_of_state_loans=sum(loans)
+  )
+
+out_of_state_lenders
+
+
+```
+
+
+**A1.** 
+
+
+## Geographic Analysis
+
+**Q2.** Write R code that examines geographic patterns for PPP loans in your state, using Census population information to calculate a per-capita figure for the state and counties and zip codes. Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure. Describe the most interesting or newsworthy findings based on your exploration.
+
+```{r}
+#state ppp loans per capita
+oregon_state_ppp_count <- oregon_ppp%>%
+  group_by(state)%>%
+  summarise(
+    count=n()
+  )
+
+oregon_state_ppp_amount <- oregon_ppp%>%
+  group_by(state)%>%
+   summarise(
+    total_amount = sum(amount)
+  )
+
+or_state_population <- get_acs(geography = "state", 
+              variables = c(population = "B01001_001"), 
+              state = "41",
+              )
+
+or_state_population<-or_state_population%>%
+    rename(state=NAME)%>%
+    rename(population=estimate)%>%
+    mutate(state = case_when(
+    state == "Oregon" ~ "OR",
+    TRUE ~ state
+  ))
+
+or_state_sum_pop <- or_state_population %>% left_join(oregon_state_ppp_amount, by=c('state'))%>%
+  select(state, population, total_amount)%>%
+  mutate(sum_loans_per_capita = (total_amount/population)) 
+
+
+
+#counties with highest number of loans and loan amounts, per capita
+
+#counties organized by ppp loan counts
+oregon_counties_ppp_amount <- oregon_ppp%>%
+  group_by(project_county_name)%>%
+  summarise(
+    count=n()
+  )%>%
+arrange(desc(count))%>%
+      rename(county=project_county_name)
+
+#counties organized by ppp loan amounts
+oregon_counties_ppp_sums<-oregon_ppp%>%
+  group_by(project_county_name)%>%
+  summarise(
+    total_amount = sum(amount)
+  )%>%
+  arrange(desc(total_amount))%>%
+    rename(county=project_county_name)
+
+#geography and population of oregon counties
+or_county_population <- get_acs(geography = "county", 
+              variables = c(population = "B01001_001"), 
+              state = "41",
+              geometry = TRUE)
+
+or_county_population<-or_county_population%>%
+  mutate(NAME = str_sub(NAME,0,nchar(NAME)-15))%>%
+  rename(county=NAME)%>%
+  rename(population=estimate)%>%
+  select(county, population, geometry)
+  
+#ppp amounts per capita
+or_ppp_sum_pop <- or_county_population %>% left_join(oregon_counties_ppp_sums, by=c('county'))
+
+or_ppp_sum_pop<-or_ppp_sum_pop%>%
+    mutate(sum_loans_per_capita = (total_amount/population))
+
+counties <- counties() 
+
+or_counties <- counties %>%
+  filter(STATEFP == "41")
+
+ggplot() + 
+  geom_sf(data=or_counties)+ 
+  geom_sf(data=or_ppp_sum_pop, aes(fill=sum_loans_per_capita)) + 
+  theme_minimal()+
+  scale_fill_viridis_b(option="magma",trans = "log")
+
+
+#zips organized by ppp loan counts
+oregon_zip_ppp_amount <- oregon_ppp%>%
+  group_by(zip)%>%
+  summarise(
+    count=n()
+  )%>%
+arrange(desc(count))
+
+
+#zips organized by ppp loan amounts
+oregon_zip_ppp_sums<-oregon_ppp%>%
+  group_by(zip)%>%
+  summarise(
+    total_amount = sum(amount)
+  )%>%
+  arrange(desc(total_amount))
+
+#geography and population of oregon zips
+or_zip_population <- get_acs(geography = "zcta", 
+              variables = c(population = "B01001_001"), 
+              state = "41",
+              geometry = TRUE)
+
+or_zip_population<-or_zip_population%>%
+  mutate(NAME = str_sub(NAME, start=7L, end=14L))%>%
+  rename(zip=NAME)%>%
+  rename(population=estimate)%>%
+  select(zip, population, geometry)
+  
+#ppp amounts per capita, zip
+zip_or_ppp_sum_pop <- or_zip_population %>% left_join(oregon_zip_ppp_sums, by=c('zip'))
+
+zip_or_ppp_sum_pop<-zip_or_ppp_sum_pop%>%
+    mutate(per_capita_state_diff = (2437.664-(total_amount/population)))
+
+counties <- counties() 
+
+or_counties <- counties %>%
+  filter(STATEFP == "41")
+
+ggplot() + 
+  geom_sf(data=or_counties)+ 
+  geom_sf(data=zip_or_ppp_sum_pop, aes(fill=per_capita_state_diff)) + 
+  theme_minimal()+
+  scale_fill_viridis_b(option="magma",trans = "log")
+
+
+```
+
+
+**A2.** 
+
+## Lender Analysis
+
+**Q3.** Write R code to examine which lenders had the most approved applications in your state (and include summary statistics such as total amount and average loan amount). Generate dataframes that show the number and total amount of all loans and undisbursed loans per lender. For those lenders who had any undisbursed loans, make a graphic showing the relationship between the total amount of loans and the total undisbursed amount. Describe the most noticeable outlier lenders on that graphic below.
+
+If there are no undisbursed loans, make graphic showing the relationship between lenders and loan amounts showing how many loans each lender issued for each amount in the dataframe. Describe the most noticeable outlier lenders on that graphic.
+
+```{r}
+or_ppp_lenders_sum<-oregon_ppp%>%
+    group_by(lender)%>%
+    summarise(
+    total_amount = sum(amount))%>%
+    arrange(desc(total_amount))
+
+or_ppp_lenders_mean<-oregon_ppp%>%
+    group_by(lender)%>%
+    summarise(
+      mean_amount = mean(amount)
+    )
+
+or_ppp_lenders<-or_ppp_lenders_mean %>% left_join(or_ppp_lenders_sum, by=c('lender'))
+
+or_ppp_lenders%>%
+  arrange(desc(mean_amount))
+
+or_ppp_lenders%>%
+  arrange(desc(total_amount))
+
+
+
+  
+```
+
+
+**A3.** 
+
+
+## Industry Analysis
+
+**Q4.** Write R code that examines industry patterns for PPP loans in your state, using the NAICS codes from the PPP data as a starting point. Generate statewide and county industry totals, then join that with 2018-19 data from the [Census County Business Patterns survey](https://www2.census.gov/programs-surveys/cbp/datasets/2019/cbp19co.zip) using 6-digit NAICS codes. The documentation explaining that data can be found here: https://www2.census.gov/programs-surveys/cbp/technical-documentation/records-layouts/2018_record_layouts/county-layout-2018.txt. To do this, you will need to add FIPS codes to your PPP dataset.
+
+Does the distribution of PPP applications by the top 10 industries (by number of applications) roughly match the number of businesses reported in the Census data? Does it roughly match if you remove self-employed individuals and sole proprietorships from the PPP totals? Write up a summary of what you've found and whether there are potentially newsworthy patterns in the data.
+
+```{r}
+#load cnsus county business patterns survey
+census_biz<-read_csv('cbp19co.txt')
+
+census_biz <- census_biz %>% mutate(fips_code = str_c(fipstate, fipscty))%>%
+  filter(fipstate==41)%>%
+  select(naics, est, fips_code)
+
+
+#load oregon fips codes, trim county names
+all_fips <- fips_codes %>% as_tibble()
+or_fips <- all_fips %>% filter(state == 'OR')
+
+or_fips<-or_fips%>%
+    mutate(county = str_sub(county, start=0L, end=-8L))
+
+or_fips <- or_fips %>% mutate(fips_code = str_c(state_code, county_code))
+
+
+#load naics codes
+naics_codes <- read_csv('naics_codes copy.csv')
+
+#join naics codes with oregon ppp data
+oregon_ppp_naics <- oregon_ppp %>%  left_join(naics_codes, by="naics_code")%>%
+    rename(naics=naics_code)
+
+
+#summarize ppp loan counts by naics title
+oregon_ppp_naics_count <- oregon_ppp_naics%>%
+    group_by(title)%>%
+    summarise(
+    count = n())%>%
+    arrange(desc(count))
+
+
+#create dataset with naics title counts and project county name
+oregon_ppp_naics_count <- oregon_ppp_naics%>%
+    group_by(title, project_county_name, naics)%>%
+    summarise(
+    total_loans = n())%>%
+    arrange(desc(total_loans))
+
+#mutate naics code to character
+oregon_ppp_naics_count<-oregon_ppp_naics_count%>%
+  mutate(naics=as.character(naics))%>%
+  rename(county=project_county_name)
+
+#join county data with fips
+oregon_ppp_naics_count <- oregon_ppp_naics_count %>%  left_join(or_fips, by="county")
+
+
+#join census data with ppp naics county dataframe
+
+census_biz_or_ppp <- oregon_ppp_naics_count %>%  inner_join(census_biz, by="naics", "fips_code")%>%
+  filter(fips_code.x==fips_code.y)%>%
+  select(title, county, naics, total_loans, est, fips_code.x)%>%
+  rename(fips_code=fips_code.x)%>%
+  arrange(desc(total_loans))
+
+
+#oregon ppp data w/o sole propietorships and self-employed
+no_sp_oregon_ppp<-oregon_ppp%>%
+  filter(business_type!='Sole Proprietorship')%>%
+    filter(business_type!='Self-Employed Individuals')
+
+no_sp_oregon_ppp_naics <- no_sp_oregon_ppp %>%  left_join(naics_codes, by="naics_code")%>%
+    rename(naics=naics_code)
+
+no_sp_oregon_ppp_naics_count <- no_sp_oregon_ppp_naics%>%
+    group_by(title, project_county_name, naics)%>%
+    summarise(
+    total_loans = n())%>%
+    arrange(desc(total_loans))
+
+no_sp_oregon_ppp_naics_count<-no_sp_oregon_ppp_naics_count%>%
+  mutate(naics=as.character(naics))%>%
+  rename(county=project_county_name)
+
+
+no_sp_oregon_ppp_naics_count <- no_sp_oregon_ppp_naics_count %>%  left_join(or_fips, by="county")
+
+
+no_sp_census_biz_or_ppp <- no_sp_oregon_ppp_naics_count %>%  inner_join(census_biz, by="naics", "fips_code")%>%
+  filter(fips_code.x==fips_code.y)%>%
+  select(title, county, naics, total_loans, est, fips_code.x)%>%
+  rename(fips_code=fips_code.x)%>%
+  arrange(desc(total_loans))
+
+```
+
+
+Create a county-level map showing the differences between the PPP applications and the Census business data for one of the top 10 industry codes. You can do this either using ggplot or Datawrapper (if the latter, publish that map and include the URL below).
+
+**A4.** 
+
+## Summary
+
+**Q5.** What is the most promising story idea that you have found during this exploration? How would you approach reporting it out and what other information/data would you need to do that? What would be the minimum story you could get from this, and what would be the maximum story?
+
+**A5.**
