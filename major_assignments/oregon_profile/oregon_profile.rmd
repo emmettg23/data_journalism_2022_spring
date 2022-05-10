@@ -26,6 +26,7 @@ library(janitor)
 library(tidycensus)
 census_api_key("cd3fd4748e5debb7e9ca66e72e7af850740cb3d4")
 library(tigris)
+library(dplyr)
 
 
 ```
@@ -33,6 +34,13 @@ library(tigris)
 ## Initial Exploration
 
 **Q1.**. Write R code that generates some basic descriptive statistics that allows you to describe the applications from your state. This code should produce results that describe the data in different ways: how many applications there are, along with ways to understand the typical and most frequent values for columns you find interesting or newsworthy. You should produce at least five (5) descriptive statistics and write up a summary of the data using them.
+
+**A1.** 
+
+Oregon had a total of 115863 PPP loans issued according to the dataset. The mean loan amount was \$86822.64	 and the mean jobs retained by these loans was 9.751808, or around 10 jobs per unique PPP loan. Multnomah County, where the eastern half of the Portland metro-area is located, received the most loans at 30855. Washington County, where the western half of the Portland metro-area is, received the second most loans at 15003. When looking at the sum of loan amounts per county, per capita, an interesting leader board emerges. Hood River County, with a small population of 23209 and a large sum loan amount of \$103754163.70, had the highest per capita loan amount of any Oregon county, with a figure of \$4470.43 PPP loans per resident. Second was the populous Multnomah County, with \$3640.87 in PPP loans per resident. Third, another interesting leader, was Sherman County, with a population of 1642 and a \$3457.53 in PPP loans per resident. I am a former resident of Hood River County (albeit limited to two summers), and immediately understood its placement in the per capita leader board: the county is a vacation destination with wineries, breweries, ritzy restaurants, and has an expensive addiction to windsurfing and kite boarding. And, looking outside of anecdotal evidence, this article (https://stacker.com/oregon/highest-earning-counties-oregon) reveals that Hood River County has the fifth highest median income in the state, based on 2019 Census data. This explains the large sums of PPP loans despite such a low population. 
+
+Back to the state-wide picture, full-service restaurant received the most loans of any industry with a total of 5431 across all counties. Second was beauty salons, with a total of 3345 loans. When summarizing by the total sum of loans by business type, however, there is a different second-place industry: offices of physicians, which received a total of \$290532278 in PPP loans. 35601 loans were serviced by in-state lenders and 80262 loans were serviced by out-of-state lenders. U.S. Bank, National Association distributed more loans than any lender, with 13369 loans, and Umpqua Bank, a Portland-based bank, had the second-most loans distributed with 10070 total loans. 
+
 
 ```{r}
 #data cleaning
@@ -42,6 +50,11 @@ oregon_ppp <- read_csv("oregon_ppp.csv")%>%
 oregon_ppp <- oregon_ppp%>%
     mutate(project_county_name = str_to_title(project_county_name))%>%
     mutate(zip = str_sub(zip, 1, 5))
+
+oregon_ppp <- oregon_ppp%>%
+  filter(project_state=="OR")%>%
+  distinct()
+
 ```
 
 
@@ -57,7 +70,7 @@ oregon_ppp%>%
     count=n()
   )
 
-#mean loan amount: 86880.24	
+#mean loan amount: 86822.64		
 oregon_ppp%>%
   summarise(
     mean_loan_amount= mean(amount)
@@ -105,11 +118,18 @@ oregon_ppp%>%
 
 #lenders with most loans, by project_county
 oregon_ppp%>%
-  group_by(lender, project_county_name)%>%
+  group_by(project_county_name)%>%
   summarise(
     count=n()
   )%>%
   arrange(desc(count))
+
+oregon_ppp%>%
+  group_by(project_county_name)%>%
+  summarise(
+    total_amount= sum(amount)
+  )%>%
+  arrange(desc(total_amount))
 
 #in-state lenders vs out of state lenders. in-state: 35608, out-of-state: 80265
 state_lenders<-oregon_ppp%>%
@@ -134,9 +154,40 @@ out_of_state_lenders
 
 
 ```
+```{r}
+#counties with highest number of loans and loan amounts, per capita
 
 
-**A1.** 
+#counties organized by ppp loan amounts
+oregon_counties_ppp_sums<-oregon_ppp%>%
+  group_by(project_county_name)%>%
+  summarise(
+    total_amount = sum(amount)
+  )%>%
+  arrange(desc(total_amount))%>%
+    rename(county=project_county_name)
+
+# population of oregon counties
+or_county_population <- get_acs(geography = "county", 
+              variables = c(population = "B01001_001"), 
+              state = "41",
+             )
+
+or_county_population<-or_county_population%>%
+  mutate(NAME = str_sub(NAME,0,nchar(NAME)-15))%>%
+  rename(county=NAME)%>%
+  rename(population=estimate)%>%
+  select(county, population)
+  
+#ppp amounts per capita
+or_ppp_sum_amount_pop <- or_county_population %>% left_join(oregon_counties_ppp_sums, by=c('county'))
+
+or_ppp_sum_amount_pop<-or_ppp_sum_amount_pop%>%
+    mutate(sum_loans_per_capita = (total_amount/population))
+
+or_ppp_sum_amount_pop%>%
+  arrange(desc(sum_loans_per_capita))
+```
 
 
 ## Geographic Analysis
@@ -170,16 +221,16 @@ or_state_population<-or_state_population%>%
     TRUE ~ state
   ))
 
-or_state_sum_pop <- or_state_population %>% left_join(oregon_state_ppp_amount, by=c('state'))%>%
-  select(state, population, total_amount)%>%
-  mutate(sum_loans_per_capita = (total_amount/population)) 
+or_state_count_pop <- or_state_population %>% left_join(oregon_state_ppp_count, by=c('state'))%>%
+  select(state, population, count)%>%
+  mutate(loans_per_capita = (count/population)) 
 
 
 
 #counties with highest number of loans and loan amounts, per capita
 
 #counties organized by ppp loan counts
-oregon_counties_ppp_amount <- oregon_ppp%>%
+oregon_counties_ppp_count <- oregon_ppp%>%
   group_by(project_county_name)%>%
   summarise(
     count=n()
@@ -209,10 +260,10 @@ or_county_population<-or_county_population%>%
   select(county, population, geometry)
   
 #ppp amounts per capita
-or_ppp_sum_pop <- or_county_population %>% left_join(oregon_counties_ppp_sums, by=c('county'))
+or_ppp_sum_pop <- or_county_population %>% left_join(oregon_counties_ppp_count, by=c('county'))
 
 or_ppp_sum_pop<-or_ppp_sum_pop%>%
-    mutate(sum_loans_per_capita = (total_amount/population))
+    mutate(loans_per_capita = (count/population))
 
 counties <- counties() 
 
@@ -221,27 +272,19 @@ or_counties <- counties %>%
 
 ggplot() + 
   geom_sf(data=or_counties)+ 
-  geom_sf(data=or_ppp_sum_pop, aes(fill=sum_loans_per_capita)) + 
+  geom_sf(data=or_ppp_sum_pop, aes(fill=loans_per_capita)) + 
   theme_minimal()+
   scale_fill_viridis_b(option="magma",trans = "log")
 
 
 #zips organized by ppp loan counts
-oregon_zip_ppp_amount <- oregon_ppp%>%
+oregon_zip_ppp_count <- oregon_ppp%>%
   group_by(zip)%>%
   summarise(
     count=n()
   )%>%
 arrange(desc(count))
 
-
-#zips organized by ppp loan amounts
-oregon_zip_ppp_sums<-oregon_ppp%>%
-  group_by(zip)%>%
-  summarise(
-    total_amount = sum(amount)
-  )%>%
-  arrange(desc(total_amount))
 
 #geography and population of oregon zips
 or_zip_population <- get_acs(geography = "zcta", 
@@ -256,10 +299,10 @@ or_zip_population<-or_zip_population%>%
   select(zip, population, geometry)
   
 #ppp amounts per capita, zip
-zip_or_ppp_sum_pop <- or_zip_population %>% left_join(oregon_zip_ppp_sums, by=c('zip'))
+zip_or_ppp_sum_pop <- or_zip_population %>% left_join(oregon_zip_ppp_count, by=c('zip'))
 
 zip_or_ppp_sum_pop<-zip_or_ppp_sum_pop%>%
-    mutate(per_capita_state_diff = (2437.664-(total_amount/population)))
+    mutate(per_capita_state_diff = (0.02805775-(count/population)))
 
 counties <- counties() 
 
@@ -277,6 +320,7 @@ ggplot() +
 
 
 **A2.** 
+The loans per-capita by county map displays the intriguing findings I discussed in Question 1: counties by the Columbia River, including Multnomah, Hood River, Sherman, Gillman, and Wallowa all had especially high per-capita figures. Those counties east of Hood River are all quite rural but still have access to the Columbia River and the outdoors, which helps explains the high business to resident ratio — these counties have a solid tourism industry. The other map, which displays the difference between each zip code's PPP loans per capita with the state figure, shows that many rural areas had a larger per capita loans figure than the state. Again, I think this can be explained by those areas' low population and successful tourism industry.
 
 ## Lender Analysis
 
@@ -291,27 +335,41 @@ or_ppp_lenders_sum<-oregon_ppp%>%
     total_amount = sum(amount))%>%
     arrange(desc(total_amount))
 
-or_ppp_lenders_mean<-oregon_ppp%>%
+or_ppp_lenders_median<-oregon_ppp%>%
     group_by(lender)%>%
     summarise(
-      mean_amount = mean(amount)
+      median_amount = median(amount)
     )
 
-or_ppp_lenders<-or_ppp_lenders_mean %>% left_join(or_ppp_lenders_sum, by=c('lender'))
+or_ppp_lenders<-or_ppp_lenders_median %>% left_join(or_ppp_lenders_sum, by=c('lender'))
+
+
+or_ppp_lenders<-or_ppp_lenders%>%
+  arrange(desc(total_amount))%>%
+  head(15)
 
 or_ppp_lenders%>%
-  arrange(desc(mean_amount))
-
-or_ppp_lenders%>%
-  arrange(desc(total_amount))
-
-
-
-  
+  ggplot() + 
+  geom_point(aes(x=median_amount, y=total_amount))+
+  geom_text(aes(x=median_amount, y=total_amount, label=lender), hjust=.75, vjust=-.6)+
+  labs(
+    title="Oregon PPP Lenders by Median Loan Amount and Total Loan Amount",
+    x = "Median Loan Amount\n",
+    y = "\nTotal Loan Amount",
+    caption = "source: SBA PPP loan database"
+    
+  )
 ```
 
 
 **A3.** 
+My scatterplot displays the 15 banks with the highest total PPP loan amounts distributed, and are plotted based on that total loan amount figure and the banks' median loan amount. There are some notable outliers. Washington Trust Bank, Summit Bank, and Herritage Bank all had especially high median loan amounts (all over /$8,000) but fairly low total loan amounts. When I looked into where Washington Trust Bank's top loans were distributed to, I started to realize why its median amount was so high: the bank only provided 420 loans, and some of its largest were to businesses in Oregon's hospitality industry, including famed ski resorts and hotels like Timberline Lodge and Mount Hood Meadows.  
+
+
+```{r}
+lender_outliers<-oregon_ppp%>%
+  filter(lender=="Washington Trust Bank")
+```
 
 
 ## Industry Analysis
@@ -408,15 +466,29 @@ no_sp_census_biz_or_ppp <- no_sp_oregon_ppp_naics_count %>%  inner_join(census_b
   rename(fips_code=fips_code.x)%>%
   arrange(desc(total_loans))
 
+
+#county-level map showing differences between PPP applications and Census business data for full-service restaurants
+
+restaurant_census_biz_or <-no_sp_census_biz_or_ppp%>%
+  filter(title=="Full-Service Restaurants")%>%
+  mutate(dif_w_census=total_loans-est)
+
+write_csv(restaurant_census_biz_or, "restaurant_census_biz_or.csv")
+
 ```
 
+Does the distribution of PPP applications by the top 10 industries (by number of applications) roughly match the number of businesses reported in the Census data? Does it roughly match if you remove self-employed individuals and sole proprietorships from the PPP totals? Write up a summary of what you've found and whether there are potentially newsworthy patterns in the data.
 
 Create a county-level map showing the differences between the PPP applications and the Census business data for one of the top 10 industry codes. You can do this either using ggplot or Datawrapper (if the latter, publish that map and include the URL below).
 
 **A4.** 
+Even when removing loans to self-employed individuals and sole proprietorships, there were still some noticeable differences between the number of businesses reported in the Census data and those that received PPP loans. Full-service restaurants in Multnomah County, for example, received 1597 loans when the Census data estimate that only 1275 restaurants existed. After removing SPs and SEIs, the loan total only went down to 1526. For beauty salons, however, removing SPs and SEIs was far more effective, as the total loan count went from 1122 down to 500 in Multnomah County, when only 270 salons were estimated to exist in 2019. I think the most newsworthy finding comes from the county-level map showing the difference between PPP applications and Census business data for Full-Service Restaurants. As the map notes, Oregon's most populous counties had the largest discrepancy between business estimates and total loans, with Multnomah and Clackamas counties being the most notable at 251 and 73 more PPP loans than estimated restaurants. This difference could be due to the Portland-metro area's rapid expansion — according to an article by KGW8 (https://www.kgw.com/article/news/local/oregon-cities-growth-last-five-years/283-420366d1-e38a-433e-bb79-c72d1ad85665), Portland's population grew by 5% between 2016 and 2021. Still, it is surprising that there are so many more loans than restaurants, and I'm ashamed to admit that it might have something to do with the way I cleaned the data or prepared my code.
 
+Link to my datawrapper map:
+https://datawrapper.dwcdn.net/DnryV/2/
 ## Summary
 
 **Q5.** What is the most promising story idea that you have found during this exploration? How would you approach reporting it out and what other information/data would you need to do that? What would be the minimum story you could get from this, and what would be the maximum story?
 
 **A5.**
+I'm most intrigued by the per-capita loan rates for some of the state's wealthier counties, as well as the lenders that distributed a small number of loans, but with especially large amounts. Both of these ideas require investigating wealthy outliers and analyzing their seemingly easy access to enormous sums of money in forgivable loans. The investigation would begin with interviewing wealthy business owners in counties like Hood River, and tracing their process to receive large PPP loans from lenders like Washington Trust Bank, Summit Bank, and Herritage Bank. Then, I would investigate the opposite end of the spectrum, and chronicle the experiences of Oregonians that applied for PPP loans for their cattle ranches or small, independent businesses, and contrast the experiences. Other information I would need includes more specific county-income data, contacts at the aforementioned banks, and business owners willing to go on the record. At minimum, the story would explain why counties like Hood River received such an enormous sum of PPP loans compared to other counties, and how these big-loan banks played a role in it. The maximum story would be similar to that of the Bank of America story by AP that we read earlier in the semester, but would instead have more identifiable characters on both sides of the wealth spectrum and paint a vivid image of how America's financial institutions operate in accordance with one's resources.
